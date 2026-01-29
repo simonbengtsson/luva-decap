@@ -1,21 +1,22 @@
 {
   "private": true,
-  "name": "lumo-decap",
+  "name": "luva-decap",
   "scripts": {
     "dev": "wrangler dev --assets public",
+    "build:app": "rm -rf dist app.luva && npm run build:client && npm run wrangler-dry-build && cp -r luva.jsonc public dist/ && npm run archive-app",
     "build:client": "npx esbuild src/client.ts --outfile=public/client.js --bundle --loader:.js=jsx",
-    "build:lumo": "rm -rf dist app.lumo && npm run build:client && npm run wrangler-dry-build && cp -r lumobase.jsonc public dist/ && npm run make-app",
     "wrangler-dry-build": "wrangler deploy --dry-run --bundle --outdir dist",
-    "make-app": "cd dist && zip -r ./app.lumo . && mv ./app.lumo ../"
+    "archive-app": "cd dist && zip -r ./app.luva . && mv ./app.luva ../"
   },
   "browser": {
     "path": "path-browserify"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "decap-cms": "^3.6.2",
     "decap-cms-backend-github": "^3.2.2",
     "decap-cms-lib-util": "^3.0.0",
-    "jsonc-parser": "^3.3.1",
+    "libsql": "^0.5.22",
     "path-browserify": "^1.0.1",
     "yaml": "^2.7.1"
   },

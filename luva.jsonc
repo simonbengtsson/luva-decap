@@ -1,12 +1,12 @@
 {
   "name": "Decap CMS",
   "subtitle": "Edit website content with Decap CMS",
-  "repository": "https://github.com/simonbengtsson/lumo-decap",
+  "repository": "https://github.com/simonbengtsson/luva-decap",
   "icon": "public/icon.png",
   "services": [
     {
-      "type": "cloudflare-kv",
-      "binding": "MAINDB"
+      "type": "turso",
+      "name": "maindb"
     }
   ]
 }

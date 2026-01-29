@@ -12,7 +12,7 @@ import {
   User,
 } from "decap-cms-lib-util";
 
-class LumoBackend implements Implementation {
+class LuvaBackend implements Implementation {
   githubBackend: GitHubBackend;
   config: Config & { githubToken: string };
 
@@ -37,7 +37,7 @@ class LumoBackend implements Implementation {
   }
 
   logout() {
-    location.href = "https://lumobase.co";
+    location.href = "https://luvabase.com";
   }
 
   authComponent() {
@@ -52,8 +52,8 @@ class LumoBackend implements Implementation {
   authenticate(credentials: Credentials) {
     const user = {
       ...credentials,
-      backendName: "lumo",
-      name: "Lumobase User",
+      backendName: "luva",
+      name: "Luvabase User",
     };
     return Promise.resolve(user);
   }
@@ -164,7 +164,7 @@ class LumoBackend implements Implementation {
 }
 
 const { CMS, DECAP_CONFIG } = window as any;
-CMS.registerBackend("lumo", LumoBackend);
+CMS.registerBackend("luva", LuvaBackend);
 CMS.init({
   config: DECAP_CONFIG,
 });

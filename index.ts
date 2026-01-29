@@ -1,20 +1,71 @@
 import { parse } from "yaml";
+import { createClient } from "@libsql/client";
+
+function getClient() {
+  const luvaEnv = process.env.luva as any
+  if (!luvaEnv) {
+    return createClient({
+      url: "http://127.0.0.1:8080",
+    })
+  } else {
+    return createClient({
+      url: luvaEnv.services.maindb.databaseUrl,
+      authToken: luvaEnv.services.maindb.databaseApiToken,
+    })
+  }
+}
+
+async function getConfig(): Promise<{
+    githubRepository: string | null;
+    githubToken: string | null;
+}> {
+
+  const turso = getClient();
+  await turso.execute(
+    "CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY UNIQUE, value TEXT)",
+  );
+
+  const result = await turso.execute("SELECT * FROM config");
+  const githubRepository = result.rows.find(row => row['key'] === 'githubRepository')?.value as string | null;
+  const githubToken = result.rows.find(row => row['key'] === 'githubToken')?.value as string | null;
+
+  return {
+    githubRepository,
+    githubToken,
+  }
+}
+
+async function setConfigValue(key: string, value: string) {
+  const turso = getClient();
+  await turso.execute(
+    "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+    [key, value],
+  );
+}
 
 export default {
   async fetch(request: Request, env: any) {
     const url = new URL(request.url);
     try {
+      const config = await getConfig();
       const pathname = url.pathname;
 
       if (pathname === "/setup") {
-        return await getSetupResponse(request, env);
+        return await getSetupResponse(request, config);
       }
-      return await getDecapResponse(request, env);
+      return await getDecapResponse(request, config);
     } catch (error) {
+      console.error('Unhandled error', error);
+
       const errorMessage =
         error instanceof AppError
           ? error.message
           : "Something went wrong when loading decap. Please check the config values and try again.";
+
+      if (url.pathname === "/setup") {
+        return new Response(errorMessage, { status: 500 });
+      }
+
       return Response.redirect(
         `${url.origin}/setup?error=${encodeURIComponent(errorMessage)}`,
         302
@@ -23,7 +74,7 @@ export default {
   },
 };
 
-async function getSetupResponse(request: Request, env: any) {
+async function getSetupResponse(request: Request, config: any) {
   if (request.method === "GET") {
     return new Response(getSetupHtml(request), {
       headers: {
@@ -32,15 +83,19 @@ async function getSetupResponse(request: Request, env: any) {
     });
   } else if (request.method === "POST") {
     const formData = await request.formData();
-    const githubRepository = formData.get("githubRepository");
-    const githubToken = formData.get("githubToken");
+    let githubRepository = formData.get("githubRepository") as string;
+    const githubToken = formData.get("githubToken") as string;
 
     if (!githubRepository || !githubToken) {
       throw new AppError("Invalid github repository or token");
     }
 
-    await env.MAINDB.put("githubRepository", githubRepository);
-    await env.MAINDB.put("githubToken", githubToken);
+    if (!githubRepository.startsWith("https://github.com/")) {
+      githubRepository = githubRepository.replace("https://github.com/", "");
+    }
+
+    await setConfigValue("githubRepository", githubRepository);
+    await setConfigValue("githubToken", githubToken);
 
     const url = new URL(request.url);
     url.pathname = "/";
@@ -48,9 +103,9 @@ async function getSetupResponse(request: Request, env: any) {
   }
 }
 
-async function getDecapResponse(request: Request, env: any) {
-  const githubRepository = await env.MAINDB.get("githubRepository");
-  const githubToken = await env.MAINDB.get("githubToken");
+async function getDecapResponse(request: Request, config: any) {
+  const githubRepository = config.githubRepository;
+  const githubToken = config.githubToken;
 
   if (!githubRepository || !githubToken) {
     const url = new URL(request.url);
@@ -114,7 +169,7 @@ async function getDecapConfig(
     decapJsonConfig.backend = {};
   }
 
-  decapJsonConfig.backend.name = "lumo";
+  decapJsonConfig.backend.name = "luva";
   decapJsonConfig.backend.repo = githubRepositoryUrl;
   decapJsonConfig.load_config_file = false;
   decapJsonConfig.githubToken = githubToken;
@@ -127,6 +182,7 @@ async function fetchGithubFileContent(
   githubToken: string,
   filename: string
 ) {
+  console.log(`Fetching ${filename} from GitHub`, githubRepositoryUrl, githubToken);
   const [owner, repo] = githubRepositoryUrl
     .split("/")
     .filter(Boolean)
@@ -137,17 +193,20 @@ async function fetchGithubFileContent(
     headers: {
       Authorization: `Bearer ${githubToken}`,
       Accept: "application/vnd.github.v3.raw",
-      "User-Agent": "Lumobase Decap CMS",
+      "User-Agent": "Luvabase Decap CMS",
     },
   });
 
   if (!response.ok) {
+    const text = await response.text();
+    console.error(`Error fetching ${filename} from GitHub`, text, response.status, response.statusText);
     throw new AppError(
       `Could not fetch ${filename} from GitHub. Please check the repository URL and token and try again.`
     );
   }
-
   const text = await response.text();
+
+  console.log(`Fetched`, filename);
   return text;
 }
 
@@ -179,7 +238,7 @@ function getSetupHtml(request: Request) {
     }
       <h1 style="margin-bottom: 0;">Setup Decap CMS</h1>
       <p style="margin-top: 0;">
-        Before you continue you need a website in a GitHub repository that preferably deploys when new commits are pushed. You can check <a href="https://github.com/simonbengtsson/lumo-decap-vitepress?tab=readme-ov-file#vitepress-with-decap-cms-as-lumo-app" target="_blank">this README</a> for example instructions.
+        Before you continue you need a website in a GitHub repository that preferably deploys when new commits are pushed. You can check <a href="https://github.com/simonbengtsson/luva-decap-vitepress?tab=readme-ov-file#vitepress-with-decap-cms-as-luva-app" target="_blank">this README</a> for example instructions.
       </p>
       <form method="POST">
       <div>

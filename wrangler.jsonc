@@ -1,14 +1,9 @@
 {
-  "name": "lumo-decap",
+  "name": "luva-decap",
   "main": "index.ts",
   "compatibility_date": "2025-04-28",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "public"
   },
-  "kv_namespaces": [
-    {
-      "binding": "MAINDB",
-      "id": "-"
-    }
-  ]
 }
