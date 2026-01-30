@@ -4,3 +4,4 @@ node_modules
 public/client.js
 .DS_Store
 dist
+.env

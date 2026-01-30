@@ -1,7 +1,7 @@
 {
   "name": "luva-decap",
   "main": "index.ts",
-  "compatibility_date": "2025-04-28",
+  "compatibility_date": "2026-01-16",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "public"
