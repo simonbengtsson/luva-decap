@@ -2,14 +2,15 @@ import { parse } from "yaml";
 import { createClient } from "@libsql/client";
 
 function getClient() {
-  const luvaEnv = process.env.luva as any
-  if (!luvaEnv) {
+  const luvaEnvRaw = process.env.luva
+  if (!luvaEnvRaw) {
     return createClient({
       url: "http://127.0.0.1:8080",
     })
   } else {
+    const luvaEnv = JSON.parse(luvaEnvRaw)
     return createClient({
-      url: luvaEnv.services.maindb.databaseUrl,
+      url: `libsql://${luvaEnv.services.maindb.databaseHostname}`,
       authToken: luvaEnv.services.maindb.databaseApiToken,
     })
   }
@@ -44,7 +45,7 @@ async function setConfigValue(key: string, value: string) {
 }
 
 export default {
-  async fetch(request: Request, env: any) {
+  async fetch(request: Request) {
     const url = new URL(request.url);
     try {
       const config = await getConfig();
